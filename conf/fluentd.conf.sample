@@ -1,0 +1,31 @@
+<source>
+  type tail
+  path /var/log/system.log
+  format syslog
+  tag feed.syslog
+</source>
+
+<source>
+  type tail
+  path /var/log/apache2/access_log
+  format apache
+  tag feed.apache.access
+</source>
+
+<match feed.**>
+  type fastladder
+  base_url http://localhost:3000
+  api_key 863e2e2d5dd34dcbb3fb62cf6bdc953f
+
+  <feed>
+    title syslog
+    description system messages
+    pattern ^.*.syslog$
+    category admin # option
+  </feed>
+  <feed>
+    title Apache access
+    description Apache HTTPD access
+    pattern ^.*.apache.*$
+  </feed>
+</match>
