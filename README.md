@@ -2,7 +2,7 @@
 
 ![](doc/screenshot.png)
 
-## Configulation
+## Configuration
 
     <source>
       type tail
@@ -24,18 +24,28 @@
       api_key 863e2e2d5dd34dcbb3fb62cf6bdc953f
 
       <feed>
-        title syslog
+        key syslog
+        title syslog feed
         description system messages
         pattern ^.*.syslog$
         category admin # option
       </feed>
       <feed>
-        title Apache access
-        description Apache HTTPD access
+        key apache-access
+        title Apache log feed
+        description Apache HTTPD access log
         pattern ^.*.apache.*$
       </feed>
     </match>
 
+### base_url(required)
+Your Fastladder URL(API base path).
+
+### api_key(required)
+Fastladder's API Key.
+
+### feed:key(required)
+A unique string for feed.
 
 
 ## Installation
