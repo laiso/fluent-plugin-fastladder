@@ -5,11 +5,13 @@ module Fluent
 
     config_param :base_url, :string, :default => 'http://localhost:3000'
     config_param :api_key, :string, :default => nil
+    config_param :key, :string, :default => nil
 
     attr_reader :feeds
 
     def initialize
       super
+      require 'json'
       require 'net/http'
     end
 
@@ -34,37 +36,53 @@ module Fluent
     end
 
     def emit(tag, es, chain)
-      es.each do |time,record|
-        update_feed tag, time, record
+      records = es.map do |time,record|
+        [tag, time, record]
       end
+
+      update_feed records
 
       chain.next
     end
 
     private
-    def update_feed(tag, time, record)
-      feed = apply_feed tag
-      unless feed.is_a?(Hash)
-        $log.warn "Could not find a valid feed. tag(#{tag})"
-        return
+    def update_feed(records)
+      items = {}
+      records.each do |tag, time, record|
+        feed = apply_feed tag
+        unless feed.is_a?(Hash)
+          $log.warn "Could not find a valid feed. tag(#{tag})"
+        end
+        unless items[feed]
+          items[feed] = []
+        end
+        items[feed] << create_item(tag, time, record, feed)
       end
 
-      Net::HTTP.post_form URI("#{@base_url}/rpc/update_feed"), { 
-          "api_key"=> @api_key,
-          "feedlink"=> "#fluent.feed.#{tag}",
-          "feedtitle"=> feed['title'] || 'NO TITLE',
-          "feeddescription"=> feed['description'] || '',
-          "link"=> "#fluent.feed.#{tag}.#{time}",
-          "body"=> record.to_s,
-          "category"=> feed['category'] || 'log',
-          "title"=> time.to_s,
-          "published_date"=> time
+      items.each do |feed, items|
+        Net::HTTP.post_form URI("#{@base_url}/rpc/update_feeds"), { 
+            "api_key"=> @api_key,
+            "feeds"=> JSON.dump(items)
         }
+      end
     end
 
     private
     def apply_feed(tag)
       @feeds.select {|feed| feed['regex'] =~ tag}.shift
+    end
+
+    private
+    def create_item(tag, time, record, feed)
+      {
+        "feedlink"=> "#fluent.feed.#{feed['key']}",
+        "feedtitle"=> feed['title'] || 'NO TITLE',
+        "feeddescription"=> feed['description'] || '',
+        "link"=> "#fluent.feed.#{tag}.#{time}",
+        "body"=> record.to_s,
+        "category"=> feed['category'] || 'log',
+        "title"=> time.to_s,
+      }
     end
 
   end
